@@ -65,15 +65,46 @@ namespace SerialPorts
                     
                     //Verifier si le fichier existe deja avant d'ecrire autre chose
                     //Ecrire dans le fichier
-                    String entete = String.Format("{0,21}","Date" );
-                           entete += 
+                    String entete;
+                    entete =  String.Format("{0,-20}","Date" );
+                    entete += String.Format("{0,-10}", ",Rad Time");
+                    entete += String.Format("{0,-5}", ",Rec");
+                    entete += String.Format("{0,-9}", ",PWM");
+                    entete += String.Format("{0,-9}", ",Tec V");
+                    entete += String.Format("{0,-9}", ",T_ant");
+                    entete += String.Format("{0,-9}", ",T_load");
+                    entete += String.Format("{0,-9}", ",T_IF");
+                    entete += String.Format("{0,-9}", ",T_case");
+                    entete += String.Format("{0,-7 }", ",Supply");
+                    entete += String.Format("{0,-9}", ",V-NdOn");
+                    entete += String.Format("{0,-8}", ",V-NdOff");
+                    entete += String.Format("{0,-6}", ",Flag");
+                    entete += String.Format("{0,-10}", ",Angle");
+                    entete += String.Format("{0,-9}", ",Temp");
+                    entete += String.Format("{0,-11}", ",X-Data");
+                    entete += String.Format("{0,-11}", ",Y-Data");
+
+                    entete += String.Format("{0,-20}", ",Date");
+                    entete += String.Format("{0,-10}", ",Rad Time");
+                    entete += String.Format("{0,-5}", ",Rec");
+                    entete += String.Format("{0,-8}", ",Freq");
+                    entete += String.Format("{0,-10}", ",Vsky-V");
+                    entete += String.Format("{0,-10}", ",Vsky-V+ND");
+                    entete += String.Format("{0,-10}", ",Vsky-H");
+                    entete += String.Format("{0,-10}", ",Vsky-V+ND");
+                    entete += String.Format("{0,-10}", ",V_load");
+                    entete += String.Format("{0,-10}", ",V_load+ND");
+                    entete += String.Format("{0,-10}", ",Tsky-V");
+                    entete += String.Format("{0,-10}", ",Tsky-H");
+                    entete += String.Format("{0,-10}", ",Tsky(V-H)");
+                   
                     //11 -'Software Date, Record, Time, Record_Type, PWM, TecV, T_ant, T_load, T_IF, T_case, Supply, V-NdOn, V-NdOff, Data_Flag, Angle,Temp Incl,X-Data, Y-Data
                     //21 -'Record,Time,Record_Type,Freq,Vsky-V,Vsky-V+ND,Vsky-H,Vsky-H+ND,VLoad,Vload+ND,Tsky-V,Tsky-H,TskyV-TskyH,'
                     //FichierCourant.BaseStream.
-                    //FichierCourant.WriteLine(entete);
+                    FichierCourant.WriteLine(entete);
 
                     
-                        
+                       
                     //Initialisation de TimerReception
                     TimerReception = new System.Timers.Timer(DELAIS_REC_MAX);
                     TimerReception.Elapsed +=new ElapsedEventHandler(depassementTimerReception);
@@ -117,14 +148,15 @@ namespace SerialPorts
                     //verification de la validite du format de la donnee
                     if (mots.Length >= 13 && mots.Length <= 17)
                     {
-                        
+                        string aEcrire = string.Join(" , ", mots);
                         typeData = Convert.ToInt32(mots[2]);
                         //Commencer les lignes avec les "11"
                         if(typeData==11)
                         {
-                            mots[mots.Length - 1] = " ";
+                           aEcrire = aEcrire.Remove(aEcrire.Length-1);
+                           aEcrire += " ";
                         }
-                        string aEcrire = string.Join(" , ", mots);
+                        
                         FichierCourant.Write(aEcrire);
                         Console.WriteLine("Type " + typeData + " "+aEcrire);
                     }
