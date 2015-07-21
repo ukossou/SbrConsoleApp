@@ -17,6 +17,7 @@ namespace SerialPorts
         const int DELAIS_REC_MAX = 10000;
         static DirectoryInfo RepCourant;
         static DateTime DateCourante;
+        static System.Timers.Timer TimerJour;
         static StreamWriter FichierCourant;
         static Queue DonneeLues;
         static void Main(string[] args)
@@ -29,9 +30,15 @@ namespace SerialPorts
                                 String.Join(" ",SerialPort.GetPortNames())
                              );
 
+            //Date 
+            DateCourante = DateTime.Now;
+            initialiserTimerJour();
+
             //Initialisation du COM5
-            Console.WriteLine("Ouverture du port " + "COM5");
-            bool res=initialiserPort( "COM5", 38400 , 10000);
+            //Console.WriteLine("Ouverture du port " + "COM5");
+            bool res = false;
+            //bool res=initialiserPort( "COM5", 38400 , 10000);
+            
             if(res)//reussite de l'initialisation
                 {
                     Console.WriteLine("\n...REUSSITE...ouverture... " + PortSerie.PortName + "\n");
@@ -48,63 +55,12 @@ namespace SerialPorts
                     //Console.WriteLine(infoRep.Name);
 
                     //creer le fichier de donnees avec la date courante
-
                     DateCourante = DateTime.Now;
-                    Console.WriteLine("Date actuelle " + DateCourante.ToString());
-
-                    char sep = Path.DirectorySeparatorChar;
-                    string cheminFich = RepCourant.Name + sep 
-                                        +"MesDu-"+DateCourante.ToString("d")
-                                        +".txt";
-                    Console.WriteLine("cheminFich " + cheminFich);
-                    FichierCourant =new StreamWriter(File.Create(cheminFich));
-
-                    //Initialisation de DonneesLues
-
+                    creerFichier();
+                    
+                    //Initialisation du tampon de donnees
                     DonneeLues = Queue.Synchronized(new Queue());
-                    
-                    //Verifier si le fichier existe deja avant d'ecrire autre chose
-                    //Ecrire dans le fichier
-                    String entete;
-                    entete =  String.Format("{0,-20}","Date" );
-                    entete += String.Format("{0,-10}", ",Rad Time");
-                    entete += String.Format("{0,-5}", ",Rec");
-                    entete += String.Format("{0,-9}", ",PWM");
-                    entete += String.Format("{0,-9}", ",Tec V");
-                    entete += String.Format("{0,-9}", ",T_ant");
-                    entete += String.Format("{0,-9}", ",T_load");
-                    entete += String.Format("{0,-9}", ",T_IF");
-                    entete += String.Format("{0,-9}", ",T_case");
-                    entete += String.Format("{0,-7 }", ",Supply");
-                    entete += String.Format("{0,-9}", ",V-NdOn");
-                    entete += String.Format("{0,-8}", ",V-NdOff");
-                    entete += String.Format("{0,-6}", ",Flag");
-                    entete += String.Format("{0,-10}", ",Angle");
-                    entete += String.Format("{0,-9}", ",Temp");
-                    entete += String.Format("{0,-11}", ",X-Data");
-                    entete += String.Format("{0,-11}", ",Y-Data");
-
-                    entete += String.Format("{0,-20}", ",Date");
-                    entete += String.Format("{0,-10}", ",Rad Time");
-                    entete += String.Format("{0,-5}", ",Rec");
-                    entete += String.Format("{0,-8}", ",Freq");
-                    entete += String.Format("{0,-10}", ",Vsky-V");
-                    entete += String.Format("{0,-10}", ",Vsky-V+ND");
-                    entete += String.Format("{0,-10}", ",Vsky-H");
-                    entete += String.Format("{0,-10}", ",Vsky-V+ND");
-                    entete += String.Format("{0,-10}", ",V_load");
-                    entete += String.Format("{0,-10}", ",V_load+ND");
-                    entete += String.Format("{0,-10}", ",Tsky-V");
-                    entete += String.Format("{0,-10}", ",Tsky-H");
-                    entete += String.Format("{0,-10}", ",Tsky(V-H)");
-                   
-                    //11 -'Software Date, Record, Time, Record_Type, PWM, TecV, T_ant, T_load, T_IF, T_case, Supply, V-NdOn, V-NdOff, Data_Flag, Angle,Temp Incl,X-Data, Y-Data
-                    //21 -'Record,Time,Record_Type,Freq,Vsky-V,Vsky-V+ND,Vsky-H,Vsky-H+ND,VLoad,Vload+ND,Tsky-V,Tsky-H,TskyV-TskyH,'
-                    //FichierCourant.BaseStream.
-                    FichierCourant.WriteLine(entete);
-
-                    
-                       
+                           
                     //Initialisation de TimerReception
                     TimerReception = new System.Timers.Timer(DELAIS_REC_MAX);
                     TimerReception.Elapsed +=new ElapsedEventHandler(depassementTimerReception);
@@ -116,19 +72,83 @@ namespace SerialPorts
                     TimerReception.Start();
                     threadEcriture.Start();
                 }
-            else
-                Console.WriteLine("...ECHEC...ouverture... " + PortSerie.PortName + "\n");
+            //else
+                //Console.WriteLine("...ECHEC...ouverture... " + PortSerie.PortName + "\n");
 
                         
             Console.WriteLine("\n...FIN du programme... ");
             Console.ReadLine();
             threadEcriture.Abort();
-            FichierCourant.Close();
+            //FichierCourant.Close();
             //fermeture du port serie
             if(PortSerie.IsOpen)
                 PortSerie.Dispose();
         }
 
+
+        private static void initialiserTimerJour()
+        {
+            DateTime demain = DateTime.Now.Date.AddDays(1);
+            TimeSpan ecartDemain = demain.Subtract(DateTime.Now);
+            
+            TimerJour = new System.Timers.Timer(ecartDemain.TotalMilliseconds);
+            TimerJour.Elapsed += new ElapsedEventHandler(depassementTimerJour);
+
+            TimerJour.Start();
+        }
+        private static void creerFichier()
+        {
+            //creer le fichier de donnees
+
+            char sep = Path.DirectorySeparatorChar;
+            string cheminFich = RepCourant.Name + sep
+                                + "MesDu-" + DateCourante.ToString("d")
+                                + ".txt";
+            FileStream fileStream = new FileStream(cheminFich, FileMode.Append, FileAccess.Write, FileShare.Read);
+            FichierCourant = new StreamWriter(fileStream);
+
+            //Verifier si le fichier existe deja avant d'ecrire 
+            if (FichierCourant.BaseStream.Length <= 100)
+                FichierCourant.WriteLine(creerEntete());
+
+        }
+        private static string creerEntete()
+        {
+            StringBuilder entete = new StringBuilder();
+            entete.Append(String.Format("{0,-20}", "Date"));
+            entete.Append( String.Format("{0,-10}", ",Rad Time"));
+            entete.Append( String.Format("{0,-5}", ",Rec"));
+            entete.Append( String.Format("{0,-9}", ",PWM"));
+            entete.Append( String.Format("{0,-9}", ",Tec V"));
+            entete.Append( String.Format("{0,-9}", ",T_ant"));
+            entete.Append( String.Format("{0,-9}", ",T_load"));
+            entete.Append( String.Format("{0,-9}", ",T_IF"));
+            entete.Append( String.Format("{0,-9}", ",T_case"));
+            entete.Append( String.Format("{0,-7 }", ",Supply"));
+            entete.Append( String.Format("{0,-9}", ",V-NdOn"));
+            entete.Append( String.Format("{0,-8}", ",V-NdOff"));
+            entete.Append( String.Format("{0,-6}", ",Flag"));
+            entete.Append( String.Format("{0,-10}", ",Angle"));
+            entete.Append( String.Format("{0,-9}", ",Temp"));
+            entete.Append( String.Format("{0,-11}", ",X-Data"));
+            entete.Append( String.Format("{0,-11}", ",Y-Data"));
+
+            entete.Append( String.Format("{0,-20}", ",Date"));
+            entete.Append( String.Format("{0,-10}", ",Rad Time"));
+            entete.Append( String.Format("{0,-5}", ",Rec"));
+            entete.Append( String.Format("{0,-8}", ",Freq"));
+            entete.Append( String.Format("{0,-10}", ",Vsky-V"));
+            entete.Append(String.Format("{0,-10}", ",Vsky-V+ND"));
+            entete.Append( String.Format("{0,-10}", ",Vsky-H"));
+            entete.Append( String.Format("{0,-10}", ",Vsky-V+ND"));
+            entete.Append( String.Format("{0,-10}", ",V_load"));
+            entete.Append( String.Format("{0,-10}", ",V_load+ND"));
+            entete.Append( String.Format("{0,-10}", ",Tsky-V"));
+            entete.Append( String.Format("{0,-10}", ",Tsky-H"));
+            entete.Append( String.Format("{0,-10}", ",Tsky(V-H)"));
+
+            return entete.ToString();
+        }
 
         private static void ecrireDisque()
         {
@@ -139,33 +159,38 @@ namespace SerialPorts
             int typeData = 0;//type de donnee envoyee par le radiometre "21" ou "11"
             while(true)
             {
-                if(DonneeLues.Count >2)
+                if(DonneeLues.Count >100)
                 {
-                    ligne = (string)DonneeLues.Dequeue();
-                    mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
+                    Console.WriteLine("Ecriture sur disque ");
+                   
+                    for (int i = 0; i < 100; i++)
+                    {
+                        ligne = (string)DonneeLues.Dequeue();
+                        mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
 
-                    mots[0]=DateTime.Now.ToString();
-                    //verification de la validite du format de la donnee
-                    if (mots.Length >= 13 && mots.Length <= 17)
-                    {
-                        string aEcrire = string.Join(" , ", mots);
-                        typeData = Convert.ToInt32(mots[2]);
-                        //Commencer les lignes avec les "11"
-                        if(typeData==11)
+                        //verification de la validite du format de la donnee
+                        if (mots.Length >= 13 && mots.Length <= 17)
                         {
-                           aEcrire = aEcrire.Remove(aEcrire.Length-1);
-                           aEcrire += " ";
+                            string aEcrire = string.Join(" , ", mots);
+                            typeData = Convert.ToInt32(mots[2]);
+                            //Commencer les lignes avec les "11"
+                            if (typeData == 11)
+                            {
+                                aEcrire = aEcrire.Remove(aEcrire.Length - 1);
+                                aEcrire += " ";
+                            }
+
+                            FichierCourant.Write(aEcrire);
+                            //Console.WriteLine("Type " + typeData + " " + aEcrire);
                         }
-                        
-                        FichierCourant.Write(aEcrire);
-                        Console.WriteLine("Type " + typeData + " "+aEcrire);
+                        else
+                        {
+                            Console.WriteLine("Donne invalide " + ligne);
+                        }
+                        //Console.WriteLine("ligne "+ligne);
+                        //FichierCourant.WriteLine(ligne); 
                     }
-                    else
-                    {
-                        Console.WriteLine("Donne invalide " + ligne);
-                    }
-                    //Console.WriteLine("ligne "+ligne);
-                    //FichierCourant.WriteLine(ligne);
+                    
                 }
             }
         }
@@ -218,7 +243,8 @@ namespace SerialPorts
                     //Console.WriteLine("Frequence lue : " + ligne);
                     mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
                     //Console.WriteLine("\n Mots lus : " + String.Join(" | ", mots));
-                    typeData = Convert.ToInt32(mots[2]);
+                    if(mots.Length >= 13)
+                        typeData = Convert.ToInt32(mots[2]);
                     if(typeData==21)
                         valeurFreq = Convert.ToInt32(mots[3]);
              }
@@ -242,6 +268,12 @@ namespace SerialPorts
             return succes;
         }
 
+        private static void depassementTimerJour(Object source, ElapsedEventArgs e)
+        {
+            Console.WriteLine("Changement de Jour   {0}", e.SignalTime);
+            Console.WriteLine("Creation du nouveau fichier pour "+FrequenceRad);
+        }
+
         private static void depassementTimerReception(Object source, ElapsedEventArgs e)
         {
             Console.WriteLine("Plus de Reception depuis  {0}", e.SignalTime);
@@ -254,13 +286,19 @@ namespace SerialPorts
             TimerReception.Stop();
 
             SerialPort sp = (SerialPort)sender;
-            string indata = sp.ReadLine();
-
-            DonneeLues.Enqueue(indata);
+            while (sp.BytesToRead > 0)
+            {
+                string indata = sp.ReadLine();
+                //enlever le premier champ du radiometre
+                //pour inserer l'lheure courante
+                indata = indata.Remove(0, 7);
+                indata = DateTime.Now.ToString() + indata;
+                DonneeLues.Enqueue(indata);
+            }
 
             TimerReception.Start();
             //Console.WriteLine("Taille de DonneesLues " + Convert.ToString(DonneeLues.Count));
-               
+
         }
         /*
         private static void AddText(FileStream fs, string value)
