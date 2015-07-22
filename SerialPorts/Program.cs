@@ -90,12 +90,12 @@ namespace SerialPorts
         {
 
 
-            /*
-                DateTime demain = DateTime.Now.Date.AddDays(1);
-                TimeSpan ecartDemain = demain.Subtract(DateTime.Now);
             
-                TimerJour = new System.Timers.Timer(ecartDemain.TotalMilliseconds);*/
-            TimerJour = new System.Timers.Timer(30000);
+            DateTime demain = DateTime.Now.Date.AddDays(1);
+            TimeSpan ecartDemain = demain.Subtract(DateTime.Now);
+            TimerJour = new System.Timers.Timer(ecartDemain.TotalMilliseconds);
+
+            //TimerJour = new System.Timers.Timer(30000);
             TimerJour.Elapsed += new ElapsedEventHandler(depassementTimerJour);
             DateCourante = DateTime.Now;
             TimerJour.Start();
@@ -106,7 +106,7 @@ namespace SerialPorts
             //creer le fichier de donnees
             char sep = Path.DirectorySeparatorChar;
             string cheminFich = RepCourant.Name + sep
-                                + "MesDu-" + DateCourante.ToString().Replace(':', '_')//DateCourante.ToString("d")
+                                + "MesDu-" + DateCourante.ToString("d")
                                 + ".txt";
             FileStream fileStream = new FileStream(cheminFich, FileMode.Append, FileAccess.Write, FileShare.Read);
             FichierCourant = new StreamWriter(fileStream);
@@ -159,14 +159,14 @@ namespace SerialPorts
             string[] separateur = new string[] { "," };
             string[] mots;
             string ligne;
-            int borne = 10;
+            int borne = 100;
 
             int typeData = 0;//type de donnee envoyee par le radiometre "21" ou "11"
             while (true)
             {
                 if (DonneeLues.Count > borne)
                 {
-                    Console.WriteLine("Ecriture sur disque ");
+                    Console.WriteLine("Ecriture sur disque "+DateTime.Now.ToString());
 
                     lock (FichierCourant)
                     {
@@ -291,6 +291,7 @@ namespace SerialPorts
         {
             Console.WriteLine("Plus de Reception depuis  {0}", e.SignalTime);
             Console.WriteLine("Envoi de RS ");
+            PortSerie.Write("RS"+Convert.ToChar(13));
         }
         private static void DataReceivedHandler(
                         object sender,
