@@ -29,59 +29,52 @@ namespace SerialPorts
             Console.WriteLine("Ports serie disponibles : " +
                                 String.Join(" ", SerialPort.GetPortNames())
                              );
-
-            //Date 
-
+           
+            //Initialisations 
             initialiserTimerJour();
 
-            //Initialisation du COM5
-            //Console.WriteLine("Ouverture du port " + "COM5");
-            //bool res = false;
             bool res = initialiserPort("COM5", 38400, 10000);
 
             if (res)//reussite de l'initialisation
             {
-                Console.WriteLine("\n...REUSSITE...ouverture... " + PortSerie.PortName + "\n");
-
                 //tester la communication 
-                if (testerCommunication())
-                    Console.WriteLine("\n...Reception OK sur ... " + PortSerie.PortName + "\n");
+                if (testerCommunication(100))
+                {
+                    FrequenceRad = detecterFrequence();
+                    Console.WriteLine("\n...Reception OK sur ... " + PortSerie.PortName 
+                                        + "==="+FrequenceRad+"===\n");
+                    //creer le repertoire qui contiendra les mesures
+                    RepCourant = Directory.CreateDirectory("Rad-" + FrequenceRad);
+         
+                    //creer le fichier de donnees 
+                    creerFichier();
 
-                FrequenceRad = detecterFrequence();
-                Console.WriteLine("\n...Frequence du RADIOMETRE... " + FrequenceRad + "\n");
+                    //Initialisation du tampon de donnees
+                    DonneeLues = Queue.Synchronized(new Queue());
 
-                //creer le repertoire qui contiendra les mesures
-                RepCourant = Directory.CreateDirectory("Rad-" + FrequenceRad);
-                //Console.WriteLine(infoRep.Name);
+                    //Initialisation de TimerReception
+                    TimerReception = new System.Timers.Timer(DELAIS_REC_MAX);
+                    TimerReception.Elapsed += new ElapsedEventHandler(depassementTimerReception);
 
-                //creer le fichier de donnees avec la date courante
-                DateCourante = DateTime.Now;
-                creerFichier();
+                    //ajout de l'evenement DataReceived
+                    PortSerie.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
 
-                //Initialisation du tampon de donnees
-                DonneeLues = Queue.Synchronized(new Queue());
-
-                //Initialisation de TimerReception
-                TimerReception = new System.Timers.Timer(DELAIS_REC_MAX);
-                TimerReception.Elapsed += new ElapsedEventHandler(depassementTimerReception);
-
-                //ajout de l'evenement DataReceived
-                PortSerie.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
-
-                //Demarrage de TimerReception
-                TimerReception.Start();
-                threadEcriture.Start();
+                    //Demarrage de TimerReception et de l'ecriture
+                    TimerReception.Start();
+                    threadEcriture.Start(); 
+                }
             }
-            //else
-            //Console.WriteLine("...ECHEC...ouverture... " + PortSerie.PortName + "\n");
-
+            else
+             Console.WriteLine("...ECHEC...ouverture... " + PortSerie.PortName + "\n");
+            
 
             Console.WriteLine("\n...FIN du programme... ");
             Console.ReadLine();
             threadEcriture.Abort();
-            FichierCourant.Dispose();
+            if(FichierCourant!=null)
+                FichierCourant.Dispose();
             //fermeture du port serie
-            if (PortSerie.IsOpen)
+            if (PortSerie!=null)
                 PortSerie.Dispose();
         }
 
@@ -161,12 +154,16 @@ namespace SerialPorts
             string ligne;
             int borne = 100;
 
+            int compteurAffichage = 0;
+
             int typeData = 0;//type de donnee envoyee par le radiometre "21" ou "11"
             while (true)
             {
                 if (DonneeLues.Count > borne)
                 {
-                    Console.WriteLine("Ecriture sur disque "+DateTime.Now.ToString());
+                    if(compteurAffichage%1000==0)
+                        Console.WriteLine("Ecriture sur disque "+PortSerie.PortName+" "+DateTime.Now.ToString());
+                    compteurAffichage += 1;
 
                     lock (FichierCourant)
                     {
@@ -201,11 +198,10 @@ namespace SerialPorts
                 }
             }
         }
-        private static bool testerCommunication()
+        private static bool testerCommunication(int maxEssais = 10)
         {
             bool bonneComm = false;
             int nombreEssais = 0;
-            int maxEssais = 10;
             PortSerie.DiscardInBuffer();
             while (bonneComm == false && nombreEssais < maxEssais)
             {
@@ -225,6 +221,8 @@ namespace SerialPorts
                     if (!bonneComm)
                     {
                         Console.WriteLine("Attente de 10 secondes");
+                        Console.WriteLine("Envoi de RS essai "+(nombreEssais+1));
+                        PortSerie.Write("RS" + Convert.ToChar(13));
                         Thread.Sleep(10000);
                     }
 
