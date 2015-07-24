@@ -10,11 +10,14 @@ using System.Text;
 namespace SerialPorts
 {
     class Program
-    { 
+    {
         static void Main(string[] args)
         {
             
             Console.WriteLine("....Programme d'enregistrement des RADIOMETRES....\n");
+
+            Queue radiometres = new Queue();
+            Queue threads = new Queue();
 
             //recherche des ports serie disponiibles
             Console.WriteLine("Ports serie disponibles : " +
@@ -22,42 +25,30 @@ namespace SerialPorts
                              );
            
             //Initialisations 
-            int nbPorts=SerialPort.GetPortNames().Length;
-            Radiometre[] radiometres = new Radiometre[nbPorts];
-            Thread[] tRad = new Thread[nbPorts];
-            int indice = 0;
-            foreach (string port in SerialPort.GetPortNames() )
+            foreach (string port in SerialPort.GetPortNames())
             {
                 Radiometre rad = new Radiometre(port);
-                radiometres[indice] = rad;
-                rad.demarrer();
-                if(rad.started)
-                 tRad[indice] = new Thread(new ThreadStart(rad.attendre));
-                indice =+ 1;
-            }
+                radiometres.Enqueue(rad);
+                Thread tRad = new Thread(new ThreadStart(rad.demarrer));
+                tRad.Name = "thread " + port;
+                threads.Enqueue(tRad);
 
-            foreach(Thread t in tRad)
-            { if(t!=null)
-                {
-                    while (!t.IsAlive) ;
-                    t.Start(); 
-                }  
             }
-
+            foreach (Thread tRad in threads)
+                tRad.Start();
+     
             Console.WriteLine("\n...Attente... ");
             Console.ReadLine();
-
-            foreach (Thread t in tRad)
+            Radiometre.Terminer = true;
+            //foreach (Thread tRad in threads) if (tRad.IsAlive)Console.WriteLine("Thread vivant "+tRad.Name);
+            foreach (Thread tRad in threads)
             {
-                if (t != null)
-                {
-                    t.Abort();
-                }
+                if(tRad.IsAlive){tRad.Abort(); tRad.Join();}   
             }
-
-            foreach(Radiometre rad in radiometres )
-                if(rad!=null)
-                    rad.finaliser();
+                
+            foreach(Radiometre rad in radiometres)
+                rad.finaliser();
+            
 
         }
     }
