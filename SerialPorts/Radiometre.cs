@@ -133,7 +133,7 @@ namespace SerialPorts
                 char sep = Path.DirectorySeparatorChar;
                 string cheminFich = RepCourant.Name + sep
                                     + "MesDu-" + DateCourante.ToString("d")
-                                    +FrequenceRad
+                                    +"_"+FrequenceRad
                                     + ".txt";
                 FileStream fileStream = new FileStream(cheminFich, FileMode.Append, FileAccess.Write, FileShare.Read);
                 FichierCourant = new StreamWriter(fileStream);
