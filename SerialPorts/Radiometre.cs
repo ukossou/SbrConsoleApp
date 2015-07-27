@@ -231,6 +231,8 @@ namespace SerialPorts
                     }
 
                 }
+                else
+                    Thread.Sleep(600000);
             }
         }
         private bool testerCommunication(int maxEssais = 10)

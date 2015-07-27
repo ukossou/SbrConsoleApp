@@ -27,7 +27,7 @@ namespace SerialPorts
             //Initialisations 
             foreach (string port in SerialPort.GetPortNames())
             {
-                if (port != "COM1")
+                //if (port != "COM1")
                 {
                     Radiometre rad = new Radiometre(port);
                     radiometres.Enqueue(rad);
