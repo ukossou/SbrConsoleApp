@@ -13,10 +13,9 @@ namespace SerialPorts
     {
         private SerialPort PortSerie;
         private int FrequenceRad = 0;
-        //private System.Timers.Timer TimerReception;//Timer pour detecter si le radiometre cesse de transmettre 
         private int DELAIS_REC_MAX = 30000;
         private DirectoryInfo RepCourant;
-        private DateTime DateCourante;
+        //private DateTime DateCourante;
         private System.Timers.Timer TimerJour;
         private StreamWriter FichierCourant;
         private Queue DonneeLues;
@@ -40,14 +39,14 @@ namespace SerialPorts
 
                 bool res = false;
                 res = initialiserPort(NomPort, 38400, DELAIS_REC_MAX);
-  
+
                 if (res)//reussite de l'initialisation
                 {
                     int nbTestCommunication = 1;
                     ThreadEcriture = new Thread(ecrireDisque);
 
                     //Initialisations 
-                    initialiserTimerJour();
+                    //initialiserTimerJour();
                     //tester la communication 
                     if (testerCommunication(nbTestCommunication))
                     {
@@ -58,17 +57,21 @@ namespace SerialPorts
                         RepCourant = Directory.CreateDirectory("Rad-" + FrequenceRad);
 
                         //creer le fichier de donnees 
-                        creerFichier();
-
-                        //Initialisation du tampon de donnees
-                        DonneeLues = Queue.Synchronized(new Queue());
-
-                        //ajout de l'evenement DataReceived
-                        PortSerie.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+                      
                         
-                        //Demarrer le thread d'ecriture
-                        ThreadEcriture.Start();
-                        Started = true;
+                            creerFichier();
+
+                            //Initialisation du tampon de donnees
+                            DonneeLues = Queue.Synchronized(new Queue());
+
+                            //ajout de l'evenement DataReceived
+                            PortSerie.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
+
+                            //Demarrer le thread d'ecriture
+                            ThreadEcriture.Start();
+                            Started = true;
+                            initialiserTimerJour();
+                        
                     }
                 }
                 if (!Started)
@@ -81,14 +84,13 @@ namespace SerialPorts
         {
             if (Started)
             {
-                Console.WriteLine("Attente sur----> " + PortSerie.PortName + "  "+FrequenceRad);
+                Console.WriteLine("Mesure demarree sur----> " + PortSerie.PortName + "  " + FrequenceRad);
                 while (!Terminer)
                 {
                     Thread.Yield();
                     Thread.Sleep(3600000);
-                    Console.WriteLine("Thread en attente sur " + PortSerie.PortName);
+                    Console.WriteLine("Thread en actif sur " + PortSerie.PortName);
                 }
-                Console.WriteLine("Plus d'ecriture a " + DateTime.Now.ToString());
             }
 
         }
@@ -118,31 +120,46 @@ namespace SerialPorts
         {
             DateTime demain = DateTime.Now.Date.AddDays(1);
             TimeSpan ecartDemain = demain.Subtract(DateTime.Now);
-            TimerJour = new System.Timers.Timer(ecartDemain.TotalMilliseconds);
+            //TimeSpan ecartDemain = new TimeSpan(0, 1, 0);
+            if(TimerJour==null)
+            {
+                TimerJour = new System.Timers.Timer(ecartDemain.TotalMilliseconds);
+                TimerJour.Elapsed += new ElapsedEventHandler(depassementTimerJour);
+            }
+            else 
+            {
+                TimerJour.Interval = ecartDemain.TotalMilliseconds;
+            }
 
-            TimerJour.Elapsed += new ElapsedEventHandler(depassementTimerJour);
-            DateCourante = DateTime.Now;
+            //DateCourante = DateTime.Now;
             TimerJour.Start();
 
         }
         private void creerFichier()
         {
-            lock (this)
-            {
-                //creer le fichier de donnees
-                char sep = Path.DirectorySeparatorChar;
-                string cheminFich = RepCourant.Name + sep
-                                    + "MesDu-" + DateCourante.ToString("d")
-                                    +"_"+FrequenceRad
-                                    + ".txt";
-                FileStream fileStream = new FileStream(cheminFich, FileMode.Append, FileAccess.Write, FileShare.Read);
+            char sep = Path.DirectorySeparatorChar;
+            string cheminFich = RepCourant.Name + sep
+                                + "MesDu-" + DateTime.Now.ToString("d")//DateTime.Now.ToString().Replace(":","_")//
+                                + "_" + FrequenceRad
+                                + ".txt";
+            FileStream fileStream = new FileStream(cheminFich, FileMode.Append, FileAccess.Write, FileShare.Read);
+
+            if (FichierCourant==null)
+            {//premiere creation du fichier
                 FichierCourant = new StreamWriter(fileStream);
-
-                //Verifier si le fichier existe deja avant d'ecrire 
                 if (FichierCourant.BaseStream.Length < 100)
-                    FichierCourant.WriteLine(creerEntete()); 
+                   FichierCourant.WriteLine(creerEntete());
             }
-
+            else //FichierCourant != null
+            {
+                lock (FichierCourant)
+                {
+                    FichierCourant.BaseStream.Close();
+                    FichierCourant = new StreamWriter(fileStream);
+                    FichierCourant.WriteLine(creerEntete());
+                }
+            }
+            
         }
         private string creerEntete()
         {
@@ -200,39 +217,38 @@ namespace SerialPorts
                         Console.WriteLine("Ecriture sur disque " + FrequenceRad + " " + DateTime.Now.ToString());
                     compteurAffichage += 1;
 
-                    lock (FichierCourant)
-                    {
-                        for (int i = 0; i < borne; i++)
-                        {
-                            ligne = (string)DonneeLues.Dequeue();
-                            mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
 
-                            //verification de la validite du format de la donnee
-                            if (mots.Length >= 13 && mots.Length <= 17)
+                    for (int i = 0; i < borne; i++)
+                    {
+                        ligne = (string)DonneeLues.Dequeue();
+                        mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
+
+                        //verification de la validite du format de la donnee
+                        if (mots.Length >= 13 && mots.Length <= 17)
+                        {
+                            string aEcrire = string.Join(" , ", mots);
+                            typeData = Convert.ToInt32(mots[2]);
+                            //Commencer les lignes avec les "11"
+                            if (typeData == 11)
                             {
-                                string aEcrire = string.Join(" , ", mots);
-                                typeData = Convert.ToInt32(mots[2]);
-                                //Commencer les lignes avec les "11"
-                                if (typeData == 11)
-                                {
-                                    aEcrire = aEcrire.Remove(aEcrire.Length - 1);
-                                    aEcrire += " ";
-                                }
+                                aEcrire = aEcrire.Remove(aEcrire.Length - 1);
+                                aEcrire += " ";
+                            }
+                            lock (FichierCourant)
+                            {
                                 FichierCourant.Write(aEcrire);
-                                //Console.WriteLine("Type " + typeData + " " + aEcrire);
                             }
-                            else
-                            {
-                                Console.WriteLine("Donne invalide " + ligne);
-                            }
-                            //Console.WriteLine("ligne "+ligne);
-                            //FichierCourant.WriteLine(ligne); 
+                        }
+                        else
+                        {
+                            Console.WriteLine("Donne invalide " + ligne);
                         }
                     }
 
+
                 }
                 else
-                    Thread.Sleep(600000);
+                    Thread.Sleep(60000);
             }
         }
         private bool testerCommunication(int maxEssais = 10)
@@ -257,10 +273,7 @@ namespace SerialPorts
                     //Envoyer les RS et attendre un peu avec un timer
                     if (!bonneComm)
                     {
-                        Console.WriteLine("Attente de 10 secondes " + (nombreEssais + 1) + " sur " + maxEssais);
-                        //Console.WriteLine("Envoi de RS essai " + (nombreEssais + 1) + " sur " + maxEssais);
-                        //PortSerie.Write("RS" + Convert.ToChar(13));
-                        //RSenvoye = true;
+                        Console.WriteLine("Attente de 10 secondes " + (nombreEssais + 1) + " essais sur " + maxEssais);
                         Thread.Sleep(10000);
                     }
 
@@ -274,7 +287,7 @@ namespace SerialPorts
             int valeurFreq = 0;
             string[] separateur = new string[] { "," };
             string[] mots;
-            string ligne="";
+            string ligne = "";
 
             PortSerie.DiscardInBuffer();
             int typeData = 0;//type de donnee envoyee par le radiometre "21" ou "11"
@@ -287,16 +300,16 @@ namespace SerialPorts
                     ligne = PortSerie.ReadLine();
                 }
                 catch (System.TimeoutException)
-                {}
+                { }
                 finally { };
                 //Console.WriteLine("Frequence lue : " + ligne);
                 mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
                 //Console.WriteLine("\n Mots lus : " + String.Join(" | ", mots));
                 if (mots.Length >= 13)
                 {
-                    try{typeData = Convert.ToInt32(mots[2]);}
+                    try { typeData = Convert.ToInt32(mots[2]); }
                     catch (FormatException) { }
-                    finally{ }
+                    finally { }
                 }
                 if (typeData == 21)
                     valeurFreq = Convert.ToInt32(mots[3]);
@@ -321,7 +334,7 @@ namespace SerialPorts
             }
             catch (Exception)
             {
-                Console.WriteLine("Echec ouverture du "+NomPort);
+                Console.WriteLine("Echec ouverture du " + NomPort);
             }
             finally { }
             return succes;
@@ -335,12 +348,7 @@ namespace SerialPorts
 
             initialiserTimerJour();
 
-            lock (FichierCourant)
-            {
-                FichierCourant.Close();
-            }
-                creerFichier(); 
-            
+            creerFichier();
         }
 
         private void timeoutReception()
@@ -373,7 +381,7 @@ namespace SerialPorts
                     DonneeLues.Enqueue(indata);
                 }
                 catch (TimeoutException)
-                { timeoutReception();}
+                { timeoutReception(); }
                 finally { };
             }
         }
