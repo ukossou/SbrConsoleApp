@@ -42,7 +42,7 @@ namespace SerialPorts
 
                 if (res)//reussite de l'initialisation
                 {
-                    int nbTestCommunication = 1;
+                    int nbTestCommunication = 10;
                     ThreadEcriture = new Thread(ecrireDisque);
 
                     //Initialisations 
@@ -89,7 +89,7 @@ namespace SerialPorts
                 {
                     Thread.Yield();
                     Thread.Sleep(3600000);
-                    Console.WriteLine("Thread en actif sur " + PortSerie.PortName);
+                    Console.WriteLine("Thread actif sur " + PortSerie.PortName);
                 }
             }
 
@@ -275,6 +275,8 @@ namespace SerialPorts
                     {
                         Console.WriteLine("Attente de 10 secondes " + (nombreEssais + 1) + " essais sur " + maxEssais);
                         Thread.Sleep(10000);
+                        PortSerie.Write("RS" + Convert.ToChar(13));
+                        RSenvoye = true;
                     }
 
                 }
