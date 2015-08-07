@@ -42,7 +42,7 @@ namespace SerialPorts
 
                 if (res)//reussite de l'initialisation
                 {
-                    int nbTestCommunication = 10;
+                    int nbTestCommunication = 1;
                     ThreadEcriture = new Thread(ecrireDisque);
 
                     //Initialisations 
@@ -147,8 +147,12 @@ namespace SerialPorts
             if (FichierCourant==null)
             {//premiere creation du fichier
                 FichierCourant = new StreamWriter(fileStream);
-                if (FichierCourant.BaseStream.Length < 100)
-                   FichierCourant.WriteLine(creerEntete());
+                lock (FichierCourant)
+                {
+                    if (FichierCourant.BaseStream.Length < 100)
+                        FichierCourant.WriteLine(creerEntete());
+                }
+                
             }
             else //FichierCourant != null
             {
@@ -275,8 +279,8 @@ namespace SerialPorts
                     {
                         Console.WriteLine("Attente de 10 secondes " + (nombreEssais + 1) + " essais sur " + maxEssais);
                         Thread.Sleep(10000);
-                        PortSerie.Write("RS" + Convert.ToChar(13));
-                        RSenvoye = true;
+                        //PortSerie.Write("RS" + Convert.ToChar(13));
+                        //RSenvoye = true;
                     }
 
                 }
