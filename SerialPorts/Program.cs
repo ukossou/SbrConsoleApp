@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Ports;
 using System.Timers;
 using System.Text;
+using System.Globalization;
 
 namespace SerialPorts
 {
@@ -15,7 +16,15 @@ namespace SerialPorts
         {
 
             Console.WriteLine("....Programme d'enregistrement des RADIOMETRES....\n");
+            
+            /*
+            Console.WriteLine("Culture Courante "+CultureInfo.CurrentCulture.Name);
+            Console.WriteLine("Culture Courante date " + DateTime.Now.Date.ToString());
+            Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-CA");
+            Console.WriteLine("Culture Courante changee " + DateTime.Now.Date.ToString());
+            Console.WriteLine("Culture Courante changee d " + DateTime.Now.Date.ToString("d"));
 
+            Console.Read();*/
             Queue radiometres = new Queue();
             Queue threads = new Queue();
 

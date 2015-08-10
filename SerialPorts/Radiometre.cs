@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Ports;
 using System.Timers;
 using System.Text;
+using System.Globalization;
 
 namespace SerialPorts
 {
@@ -137,9 +138,11 @@ namespace SerialPorts
         }
         private void creerFichier()
         {
+            Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-CA");//Pour uniformiser le format la date sur tous les PC
             char sep = Path.DirectorySeparatorChar;
+    
             string cheminFich = RepCourant.Name + sep
-                                + "MesDu-" + DateTime.Now.ToString("d")//DateTime.Now.ToString().Replace(":","_")//
+                                + "MesDu-" + DateTime.Now.Date.ToString("d")//DateTime.Now.ToString().Replace(":","_")
                                 + "_" + FrequenceRad
                                 + ".txt";
             FileStream fileStream = new FileStream(cheminFich, FileMode.Append, FileAccess.Write, FileShare.Read);
