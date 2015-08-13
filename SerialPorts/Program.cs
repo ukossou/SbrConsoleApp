@@ -17,14 +17,6 @@ namespace SerialPorts
 
             Console.WriteLine("....Programme d'enregistrement des RADIOMETRES....\n");
             
-            /*
-            Console.WriteLine("Culture Courante "+CultureInfo.CurrentCulture.Name);
-            Console.WriteLine("Culture Courante date " + DateTime.Now.Date.ToString());
-            Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-CA");
-            Console.WriteLine("Culture Courante changee " + DateTime.Now.Date.ToString());
-            Console.WriteLine("Culture Courante changee d " + DateTime.Now.Date.ToString("d"));
-
-            Console.Read();*/
             Queue radiometres = new Queue();
             Queue threads = new Queue();
 
@@ -33,21 +25,35 @@ namespace SerialPorts
                                 String.Join(" ", SerialPort.GetPortNames())
                              );
 
-            //Initialisations 
+            //Initialisation threads et radiomtres
             foreach (string port in SerialPort.GetPortNames())
             {
-                //if (port != "COM1")
                 {
                     Radiometre rad = new Radiometre(port);
-                    radiometres.Enqueue(rad);
-                    Thread tRad = new Thread(new ThreadStart(rad.demarrer));
-                    tRad.Name = "thread " + port;
-                    threads.Enqueue(tRad);
+                    if(rad.ouverturePort())
+                    {
+                        radiometres.Enqueue(rad);
+                        Thread threadRad = new Thread(new ThreadStart(rad.demarrer));
+                        threadRad.Name = "thread " + port;
+                        threads.Enqueue(threadRad);
+                    }
                 }
-
             }
-            foreach (Thread tRad in threads)
-                tRad.Start();
+
+            foreach (Thread threadRad in threads)
+                threadRad.Start();
+
+            //foreach (Thread tRad in threads)
+                //tRad.Join();
+            Console.WriteLine("\n...initialisation terminee pour les COMs ");
+
+            foreach(Radiometre rad in radiometres )
+            {
+                if(rad.InitOK)
+                    Console.Write(" "+rad.NomPort);
+            }
+
+            Console.ReadLine();
 
             Console.WriteLine("\n...Attente... quit : pour arreter");
             lireMessage();
@@ -55,7 +61,8 @@ namespace SerialPorts
             foreach (Thread tRad in threads)
                 if (tRad.IsAlive) { tRad.Abort(); tRad.Join(); }
             foreach (Radiometre rad in radiometres)
-                rad.finaliser();
+                if (rad.Started)
+                    rad.finaliser();
         }
         private static void lireMessage()
         {
