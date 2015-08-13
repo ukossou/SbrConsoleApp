@@ -20,7 +20,7 @@ namespace SerialPorts
         private StreamWriter FichierCourant;
         private Queue DonneeLues;
         private Thread ThreadEcriture;
-        private bool RSenvoye = false;
+        
 
         public DateTime derniereEcriture;
         public string TCase;
@@ -29,6 +29,7 @@ namespace SerialPorts
         public int FrequenceRad = 0;
         public bool Started = false;
         public bool InitOK = false;
+        public bool RSenvoye = false;
 
         public static bool Terminer = false;
         public static bool Ecrire = false;
