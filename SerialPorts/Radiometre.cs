@@ -23,7 +23,8 @@ namespace SerialPorts
         
 
         public DateTime derniereEcriture;
-        public string TCase;
+        public string TskyV;
+        public string TskyH;
         public string TLoad;
         public string NomPort;
         public int FrequenceRad = 0;
@@ -40,7 +41,8 @@ namespace SerialPorts
             PortSerie = new SerialPort();
             PortSerie.PortName = nom;
             PortSerie.BaudRate = BaudRate;
-            TCase = "Inconnue";
+            TskyV = "Inconnue";
+            TskyH = "Inconnue";
             TLoad = "Inconnue";
         }
 
@@ -53,8 +55,8 @@ namespace SerialPorts
                     PortSerie.ReadLine();//attendre des donnees
                     ThreadEcriture = new Thread(ecrireDisque);
                     FrequenceRad = detecterFrequence();
-                    Console.WriteLine("\n...Reception OK sur ... " + PortSerie.PortName
-                                        + "===" + FrequenceRad + "===\n");
+                    //Console.WriteLine("\n...Reception OK sur ... " + PortSerie.PortName
+                                        //+ "===" + FrequenceRad + "===\n");
                     //creer le repertoire qui contiendra les mesures
                     RepCourant = Directory.CreateDirectory("Rad-" + FrequenceRad);
 
@@ -76,9 +78,6 @@ namespace SerialPorts
                     Started = true;
                     initialiserTimerJour();
                 }
-                //if (!Started)
-                //Console.WriteLine("Echec Initialisation " + NomPort);
-                //attendre();
             }
         }
 
@@ -86,12 +85,12 @@ namespace SerialPorts
         {
             if (Started)
             {
-                Console.WriteLine("Mesure demarree sur----> " + PortSerie.PortName + "  " + FrequenceRad);
+                //Console.WriteLine("Mesure demarree sur----> " + PortSerie.PortName + "  " + FrequenceRad);
                 while (!Terminer)
                 {
                     Thread.Yield();
                     Thread.Sleep(3600000);
-                    Console.WriteLine("Thread actif sur " + PortSerie.PortName);
+                    //Console.WriteLine("Thread actif sur " + PortSerie.PortName);
                 }
             }
 
@@ -114,7 +113,7 @@ namespace SerialPorts
                 try
                 {
                     PortSerie.Close();
-                    Console.WriteLine("***Fermeture radiometre**** " + FrequenceRad);
+                    //Console.WriteLine("***Fermeture radiometre**** " + FrequenceRad);
                 }
                 catch (Exception) { }
                 finally { }
@@ -217,9 +216,8 @@ namespace SerialPorts
             string[] separateur = new string[] { "," };
             string[] mots;
             string ligne;
-            int borne = 10;
+            int borne = 5;
 
-            int compteurAffichage = 0;
             Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-CA");
 
             int typeData = 0;//type de donnee envoyee par le radiometre "21" ou "11"
@@ -227,13 +225,6 @@ namespace SerialPorts
             {
                 if (DonneeLues.Count > borne)
                 {
-                    //if (compteurAffichage % 10 == 0)
-                        //Console.WriteLine("Ecriture sur disque " + FrequenceRad + " " + DateTime.Now.ToString());
-                    Console.WriteLine("T_CASE " + TCase + " " + DateTime.Now.ToString());
-                    Console.WriteLine("T_LOAD " + TLoad + " " + DateTime.Now.ToString());
-                    compteurAffichage += 1;
-
-
                     for (int i = 0; i < borne; i++)
                     {
                         ligne = (string)DonneeLues.Dequeue();
@@ -247,14 +238,19 @@ namespace SerialPorts
                             {
                                 typeData = Convert.ToInt32(mots[2]);
                             }
-                            catch (Exception)
-                            { }
+                            catch (Exception) { }
                             finally { }
                             //Commencer les lignes avec les "11"
                             if (typeData == 11)
                             {
                                 TLoad = mots[6];
-                                TCase = mots[8];
+                                aEcrire = aEcrire.Remove(aEcrire.Length - 1);
+                                aEcrire += " ";
+                            }
+                            if (typeData == 21)
+                            {
+                                TskyV = mots[10];
+                                TskyH = mots[11];
                                 aEcrire = aEcrire.Remove(aEcrire.Length - 1);
                                 aEcrire += " ";
                             }
@@ -274,7 +270,7 @@ namespace SerialPorts
 
                 }
                 else
-                    Thread.Sleep(60000);
+                    Thread.Sleep(5000);
             }
         }
 
@@ -331,8 +327,8 @@ namespace SerialPorts
         private void depassementTimerJour(Object source, ElapsedEventArgs e)
         {
             TimerJour.Stop();
-            Console.WriteLine("Changement de Jour   {0}", e.SignalTime);
-            Console.WriteLine("Creation du nouveau fichier pour " + FrequenceRad);
+            //Console.WriteLine("Changement de Jour   {0}", e.SignalTime);
+            //Console.WriteLine("Creation du nouveau fichier pour " + FrequenceRad);
 
             initialiserTimerJour();
 
@@ -341,8 +337,8 @@ namespace SerialPorts
 
         private void timeoutReception(Object source, ElapsedEventArgs e)
         {
-            Console.WriteLine("Plus de Reception depuis " + DateTime.Now.ToString());
-            Console.WriteLine("Envoi de RS ");
+            //Console.WriteLine("Plus de Reception depuis " + DateTime.Now.ToString());
+            //Console.WriteLine("Envoi de RS ");
             PortSerie.Write("RS" + Convert.ToChar(13));
             RSenvoye = true;
         }
@@ -361,12 +357,17 @@ namespace SerialPorts
 
             while (sp.BytesToRead > 0)
             {
+                try
+                {
                     string indata = sp.ReadLine();
                     //enlever le premier champ du radiometre
                     //pour inserer l'lheure courante
                     indata = indata.Remove(0, 7);
                     indata = DateTime.Now.ToString() + indata;
                     DonneeLues.Enqueue(indata);
+                }
+                catch (Exception){}
+                finally { }    
             }
             TimerReception.Start();
         }
