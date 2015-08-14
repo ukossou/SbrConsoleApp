@@ -28,11 +28,14 @@ namespace SerialPorts
             Radiometres = new Queue();
             Queue threads = new Queue();
 
+            //int i = 0;
             //Initialisation threads et radiometres
             foreach (string port in SerialPort.GetPortNames())
             {
-                int noCom = Convert.ToInt32(port[4]);
-                if(noCom >= 4 && noCom <= 7)
+                int noCom = Convert.ToInt32(port.Substring(3,1));
+                //Console.SetCursorPosition(i*4,Console.WindowHeight -2);
+                //Console.Write("num de COM " +noCom);
+                if(noCom > 3 && noCom < 8)
                 {
                     Radiometre rad = new Radiometre(port);
                     if(rad.ouverturePort())
@@ -113,9 +116,9 @@ namespace SerialPorts
                 dessinerLigne(i, nbColonnes);
             }
 
-            Console.SetCursorPosition(0, nbLignes);
+            Console.SetCursorPosition(0, nbLignes-1);
             Console.Write("\"quit\" : quitter   \"mes\" : mesurer");
-            Console.SetCursorPosition(45, nbLignes);
+            Console.SetCursorPosition(45, nbLignes-1);
         }
 
         private static void updateAffichage(Object source, ElapsedEventArgs e )
