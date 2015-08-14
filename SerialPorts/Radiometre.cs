@@ -41,6 +41,7 @@ namespace SerialPorts
             PortSerie = new SerialPort();
             PortSerie.PortName = nom;
             PortSerie.BaudRate = BaudRate;
+            //PortSerie.ReadTimeout = 30000;
             TskyV = "Inconnue";
             TskyH = "Inconnue";
             TLoad = "Inconnue";
@@ -67,6 +68,7 @@ namespace SerialPorts
                     DonneeLues = Queue.Synchronized(new Queue());
 
                     //ajout des evenements
+                    PortSerie.ReadTimeout = 30000;
                     PortSerie.DataReceived += new SerialDataReceivedEventHandler(DataReceivedHandler);
 
                     TimerReception = new System.Timers.Timer(TIMEOUT_RECEPTION);
@@ -251,8 +253,6 @@ namespace SerialPorts
                             {
                                 TskyV = mots[10];
                                 TskyH = mots[11];
-                                aEcrire = aEcrire.Remove(aEcrire.Length - 1);
-                                aEcrire += " ";
                             }
                             lock (FichierCourant)
                             {
@@ -342,12 +342,11 @@ namespace SerialPorts
             PortSerie.Write("RS" + Convert.ToChar(13));
             RSenvoye = true;
         }
-        private void DataReceivedHandler(
-                        object sender,
-                        SerialDataReceivedEventArgs e)
+        private void DataReceivedHandler(object sender, SerialDataReceivedEventArgs e)             
         {
             Thread.CurrentThread.CurrentCulture = new CultureInfo("fr-CA");//Pour uniformiser le format date sur tous les PC
             SerialPort sp = (SerialPort)sender;
+
             TimerReception.Stop();
             if (RSenvoye)
             {
@@ -355,20 +354,20 @@ namespace SerialPorts
                 RSenvoye = false;
             }
 
-            while (sp.BytesToRead > 0)
+
+            try
             {
-                try
-                {
-                    string indata = sp.ReadLine();
-                    //enlever le premier champ du radiometre
-                    //pour inserer l'lheure courante
-                    indata = indata.Remove(0, 7);
-                    indata = DateTime.Now.ToString() + indata;
-                    DonneeLues.Enqueue(indata);
-                }
-                catch (Exception){}
-                finally { }    
+                string indata = sp.ReadLine();
+                //enlever le premier champ du radiometre pour inserer l'lheure courante
+                indata = indata.Remove(0, 7);
+                indata = DateTime.Now.ToString() + indata;
+                DonneeLues.Enqueue(indata); 
             }
+            catch (Exception)
+            {}
+            finally
+            { }
+
             TimerReception.Start();
         }
     }

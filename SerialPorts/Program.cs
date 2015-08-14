@@ -21,7 +21,7 @@ namespace SerialPorts
         static void Main(string[] args)
         {
             Console.Title = " SBR CARTEL ";
-            TimerAffichage = new System.Timers.Timer(10000);
+            TimerAffichage = new System.Timers.Timer(3000);
             TimerAffichage.Elapsed += new ElapsedEventHandler(updateAffichage);
            
             
@@ -31,6 +31,7 @@ namespace SerialPorts
             //Initialisation threads et radiometres
             foreach (string port in SerialPort.GetPortNames())
             {
+                if(port!="COM1")
                 {
                     Radiometre rad = new Radiometre(port);
                     if(rad.ouverturePort())
