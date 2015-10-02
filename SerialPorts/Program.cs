@@ -12,10 +12,9 @@ namespace SerialPorts
 {
     class Program
     {
-        private static int NbRadiometres;
-        private static Queue Radiometres;
         private static System.Timers.Timer TimerAffichage;
-
+        private static Radiometre l_band;
+        private static Thread thread_l_band;  
         private static int EcartMessage;
         private static int TailleMessage;
         static void Main(string[] args)
@@ -23,33 +22,23 @@ namespace SerialPorts
             Console.Title = " SBR CARTEL ";
             TimerAffichage = new System.Timers.Timer(3000);
             TimerAffichage.Elapsed += new ElapsedEventHandler(updateAffichage);
-           
-            
-            Radiometres = new Queue();
-            Queue threads = new Queue();
 
-            //int i = 0;
+
             //Initialisation threads et radiometres
             foreach (string port in SerialPort.GetPortNames())
             {
                 int noCom = Convert.ToInt32(port.Substring(3,1));
-                //Console.SetCursorPosition(i*4,Console.WindowHeight -2);
-                //Console.Write("num de COM " +noCom);
-                if(noCom > 3 && noCom < 8)
+                if(noCom == 1)
                 {
-                    Radiometre rad = new Radiometre(port);
-                    if(rad.ouverturePort())
+                    l_band = new Radiometre(port);
+                    if(l_band.ouverturePort())
                     {
-                        Radiometres.Enqueue(rad);
-                        Thread threadRad = new Thread(new ThreadStart(rad.demarrer));
-                        threadRad.Name = "thread " + port;
-                        threads.Enqueue(threadRad);
+                        thread_l_band = new Thread(new ThreadStart(l_band.demarrer));
+                        thread_l_band.Name = "thread " + port;
                     }
                 }
             }
-            NbRadiometres = Radiometres.Count;
-            foreach (Thread threadRad in threads)
-                threadRad.Start();
+                thread_l_band.Start();
 
             afficher();
             TimerAffichage.Start();
@@ -57,11 +46,9 @@ namespace SerialPorts
             lireMessage();
             
 
-            foreach (Thread tRad in threads)
-                if (tRad.IsAlive) { tRad.Abort(); tRad.Join(); }
-            foreach (Radiometre rad in Radiometres)
-                if (rad.Started)
-                    rad.finaliser();
+                if (thread_l_band.IsAlive) { thread_l_band.Abort(); thread_l_band.Join(); }
+                if (l_band.Started)
+                    l_band.finaliser();
              
         }
         private static void lireMessage()
@@ -80,8 +67,7 @@ namespace SerialPorts
                 {
                     Radiometre.Ecrire = true;
                 }
-                
-                //Thread.Sleep(10000);
+
             }
         }
 
@@ -111,14 +97,14 @@ namespace SerialPorts
          
             //Tracer des lignes de separation
             int debut = 1; 
-            for (int i = debut; i <= debut+NbRadiometres*4; i=i+4)
+            for (int i = debut; i <= debut+4; i=i+4)
             {
                 dessinerLigne(i, nbColonnes);
             }
 
-            Console.SetCursorPosition(0, nbLignes-1);
+            Console.SetCursorPosition(0, nbLignes-3);
             Console.Write("\"quit\" : quitter   \"mes\" : mesurer");
-            Console.SetCursorPosition(45, nbLignes-1);
+            Console.SetCursorPosition(45, nbLignes-3);
         }
 
         private static void updateAffichage(Object source, ElapsedEventArgs e )
@@ -129,35 +115,34 @@ namespace SerialPorts
 
             //Mise a jour des champs
             int positionLigne = 3;
-            foreach(Radiometre radiometre in Radiometres  )
             {
                 
                 //statut de la communication
                 string statut = "";
-                if (radiometre.InitOK)
+                if (l_band.InitOK)
                     statut = "attente";
-                if (radiometre.Started)
+                if (l_band.Started)
                     statut = "OK";
-                if (radiometre.RSenvoye)
+                if (l_band.RSenvoye)
                     statut = "perdue";
                 Console.SetCursorPosition(0, positionLigne);
                 Console.Write(String.Format("{0,-10}", statut));
 
                 //frequence 
                 Console.SetCursorPosition(EcartMessage+1, positionLigne);
-                Console.Write(String.Format("{0,-10}",radiometre.FrequenceRad));
+                Console.Write(String.Format("{0,-10}",l_band.FrequenceRad));
                 //TskyV
                 Console.SetCursorPosition(EcartMessage*2+1, positionLigne);
-                Console.Write(String.Format("{0,-10}",radiometre.TskyV));
+                Console.Write(String.Format("{0,-10}",l_band.TskyV));
                 //TskyH
                 Console.SetCursorPosition(EcartMessage * 3 + 1, positionLigne);
-                Console.Write(String.Format("{0,-10}", radiometre.TskyH));
+                Console.Write(String.Format("{0,-10}", l_band.TskyH));
                 //Tload
                 Console.SetCursorPosition(EcartMessage*4+1, positionLigne);
-                Console.Write(String.Format("{0,-10}",radiometre.TLoad));
+                Console.Write(String.Format("{0,-10}",l_band.TLoad));
                 //Derniere ecriture
                 Console.SetCursorPosition(EcartMessage*5+1, positionLigne);
-                Console.Write(String.Format("{0,-10}",radiometre.derniereEcriture.ToShortTimeString()));
+                Console.Write(String.Format("{0,-10}",l_band.derniereEcriture.ToShortTimeString()));
                 positionLigne += 4;
             }
             Console.SetCursorPosition(colonneCurseur,ligneCurseur);
