@@ -38,17 +38,21 @@ namespace SerialPorts
                     }
                 }
             }
+            if(thread_l_band!= null)
                 thread_l_band.Start();
 
             afficher();
             TimerAffichage.Start();
           
             lireMessage();
-            
 
+
+            if (l_band != null && thread_l_band != null)
+            {
                 if (thread_l_band.IsAlive) { thread_l_band.Abort(); thread_l_band.Join(); }
                 if (l_band.Started)
-                    l_band.finaliser();
+                    l_band.finaliser(); 
+            }
              
         }
         private static void lireMessage()
@@ -58,6 +62,7 @@ namespace SerialPorts
             {
 
                 message = Console.ReadLine();
+                message = message.ToLower();
 
                 if (message == "quit")
                 {
@@ -115,6 +120,7 @@ namespace SerialPorts
 
             //Mise a jour des champs
             int positionLigne = 3;
+            if(l_band != null)
             {
                 
                 //statut de la communication

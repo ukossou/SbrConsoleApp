@@ -183,9 +183,9 @@ namespace SerialPorts
             entete.Append(String.Format("{0,-5}", ",Rec"));
             entete.Append(String.Format("{0,-9}", ",PWM"));
             entete.Append(String.Format("{0,-9}", ",Tec V"));
-            entete.Append(String.Format("{0,-9}", ",T_ant"));
+            entete.Append(String.Format("{0,-9}", ",T1_cal_bb"));
+            entete.Append(String.Format("{0,-9}", ",T2_cal_bb"));
             entete.Append(String.Format("{0,-9}", ",T_load"));
-            entete.Append(String.Format("{0,-9}", ",T_IF"));
             entete.Append(String.Format("{0,-9}", ",T_case"));
             entete.Append(String.Format("{0,-7 }", ",Supply"));
             entete.Append(String.Format("{0,-9}", ",V-NdOn"));
@@ -201,11 +201,9 @@ namespace SerialPorts
             entete.Append(String.Format("{0,-5}", ",Rec"));
             entete.Append(String.Format("{0,-8}", ",Freq"));
             entete.Append(String.Format("{0,-10}", ",Vsky-V"));
-            entete.Append(String.Format("{0,-10}", ",Vsky-V+ND"));
             entete.Append(String.Format("{0,-10}", ",Vsky-H"));
-            entete.Append(String.Format("{0,-10}", ",Vsky-V+ND"));
-            entete.Append(String.Format("{0,-10}", ",V_load"));
             entete.Append(String.Format("{0,-10}", ",V_load+ND"));
+            entete.Append(String.Format("{0,-10}", ",V_load"));
             entete.Append(String.Format("{0,-10}", ",Tsky-V"));
             entete.Append(String.Format("{0,-10}", ",Tsky-H"));
             entete.Append(String.Format("{0,-10}", ",Tsky(V-H)"));
@@ -233,7 +231,7 @@ namespace SerialPorts
                         mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
 
                         //verification de la validite du format de la donnee
-                        if (mots.Length >= 13 && mots.Length <= 17)
+                        if (mots.Length >= 10 && mots.Length <= 17)
                         {
                             string aEcrire = string.Join(" , ", mots);
                             try
@@ -245,14 +243,14 @@ namespace SerialPorts
                             //Commencer les lignes avec les "11"
                             if (typeData == 11)
                             {
-                                TLoad = mots[6];
+                                TLoad = mots[7];
                                 aEcrire = aEcrire.Remove(aEcrire.Length - 1);
                                 aEcrire += " ";
                             }
                             if (typeData == 21)
                             {
-                                TskyV = mots[10];
-                                TskyH = mots[11];
+                                TskyV = mots[8];
+                                TskyH = mots[9];
                             }
                             lock (FichierCourant)
                             {
@@ -294,9 +292,7 @@ namespace SerialPorts
                 catch (System.TimeoutException)
                 { }
                 finally { };
-                //Console.WriteLine("Frequence lue : " + ligne);
                 mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
-                //Console.WriteLine("\n Mots lus : " + String.Join(" | ", mots));
                 if (mots.Length >= 13)
                 {
                     try { typeData = Convert.ToInt32(mots[2]); }
@@ -327,18 +323,12 @@ namespace SerialPorts
         private void depassementTimerJour(Object source, ElapsedEventArgs e)
         {
             TimerJour.Stop();
-            //Console.WriteLine("Changement de Jour   {0}", e.SignalTime);
-            //Console.WriteLine("Creation du nouveau fichier pour " + FrequenceRad);
-
             initialiserTimerJour();
-
             creerFichier();
         }
 
         private void timeoutReception(Object source, ElapsedEventArgs e)
         {
-            //Console.WriteLine("Plus de Reception depuis " + DateTime.Now.ToString());
-            //Console.WriteLine("Envoi de RS ");
             PortSerie.Write("RS" + Convert.ToChar(13));
             RSenvoye = true;
         }
