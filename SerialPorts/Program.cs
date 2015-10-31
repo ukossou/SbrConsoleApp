@@ -24,36 +24,20 @@ namespace SerialPorts
             TimerAffichage.Elapsed += new ElapsedEventHandler(updateAffichage);
 
 
-            //Initialisation threads et radiometres
-            foreach (string port in SerialPort.GetPortNames())
+            //Initialisation du radiometre
+            l_band = new Radiometre("COM1");
+            if(l_band.ouverturePort())
             {
-                int noCom = Convert.ToInt32(port.Substring(3,1));
-                if(noCom == 1)
-                {
-                    l_band = new Radiometre(port);
-                    if(l_band.ouverturePort())
-                    {
-                        thread_l_band = new Thread(new ThreadStart(l_band.demarrer));
-                        thread_l_band.Name = "thread " + port;
-                    }
-                }
-            }
-            if(thread_l_band!= null)
-                thread_l_band.Start();
-
+              thread_l_band = new Thread(new ThreadStart(l_band.demarrer));
+              thread_l_band.Name = "thread " + "COM1";
+              thread_l_band.Start();
+             }
+       
+            //Affichage des informations    
             afficher();
             TimerAffichage.Start();
-          
             lireMessage();
-
-
-            if (l_band != null && thread_l_band != null)
-            {
-                if (thread_l_band.IsAlive) { thread_l_band.Abort(); thread_l_band.Join(); }
-                if (l_band.Started)
-                    l_band.finaliser(); 
-            }
-             
+         
         }
         private static void lireMessage()
         {
@@ -73,6 +57,13 @@ namespace SerialPorts
                     Radiometre.Ecrire = true;
                 }
 
+            }
+
+            if (l_band != null && thread_l_band != null)
+            {
+                if (thread_l_band.IsAlive) { thread_l_band.Abort(); thread_l_band.Join(); }
+                if (l_band.Started)
+                    l_band.finaliser();
             }
         }
 
@@ -148,7 +139,7 @@ namespace SerialPorts
                 Console.Write(String.Format("{0,-10}",l_band.TLoad));
                 //Derniere ecriture
                 Console.SetCursorPosition(EcartMessage*5+1, positionLigne);
-                Console.Write(String.Format("{0,-10}",l_band.derniereEcriture.ToShortTimeString()));
+                Console.Write(String.Format("{0,-10}",l_band.derniereEcriture));
                 positionLigne += 4;
             }
             Console.SetCursorPosition(colonneCurseur,ligneCurseur);

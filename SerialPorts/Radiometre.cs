@@ -22,7 +22,7 @@ namespace SerialPorts
         private Thread ThreadEcriture;
         
 
-        public DateTime derniereEcriture;
+        public string derniereEcriture;
         public string TskyV;
         public string TskyH;
         public string TLoad;
@@ -45,6 +45,7 @@ namespace SerialPorts
             TskyV = "Inconnue";
             TskyH = "Inconnue";
             TLoad = "Inconnue";
+            derniereEcriture = "Inconnue";
         }
 
         public void demarrer()
@@ -183,8 +184,8 @@ namespace SerialPorts
             entete.Append(String.Format("{0,-5}", ",Rec"));
             entete.Append(String.Format("{0,-9}", ",PWM"));
             entete.Append(String.Format("{0,-9}", ",Tec V"));
-            entete.Append(String.Format("{0,-9}", ",T1_cal_bb"));
-            entete.Append(String.Format("{0,-9}", ",T2_cal_bb"));
+            entete.Append(String.Format("{0,-9}", ",T1_C_BB"));
+            entete.Append(String.Format("{0,-9}", ",T2_C_BB"));
             entete.Append(String.Format("{0,-9}", ",T_load"));
             entete.Append(String.Format("{0,-9}", ",T_case"));
             entete.Append(String.Format("{0,-7 }", ",Supply"));
@@ -257,7 +258,7 @@ namespace SerialPorts
                                 if(Ecrire)
                                 {
                                     FichierCourant.Write(aEcrire);
-                                    derniereEcriture = DateTime.Now;
+                                    derniereEcriture = DateTime.Now.ToShortTimeString();
                                 }
                                     
                             }
