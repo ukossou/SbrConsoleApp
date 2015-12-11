@@ -28,6 +28,7 @@ namespace SerialPorts
             l_band = new Radiometre("COM1");
             if(l_band.ouverturePort())
             {
+              //Console.WriteLine("Ouverture reussie "); 
               thread_l_band = new Thread(new ThreadStart(l_band.demarrer));
               thread_l_band.Name = "thread " + "COM1";
               thread_l_band.Start();

@@ -192,10 +192,6 @@ namespace SerialPorts
             entete.Append(String.Format("{0,-9}", ",V-NdOn"));
             entete.Append(String.Format("{0,-8}", ",V-NdOff"));
             entete.Append(String.Format("{0,-6}", ",Flag"));
-            entete.Append(String.Format("{0,-10}", ",Angle"));
-            entete.Append(String.Format("{0,-9}", ",Temp"));
-            entete.Append(String.Format("{0,-11}", ",X-Data"));
-            entete.Append(String.Format("{0,-11}", ",Y-Data"));
 
             entete.Append(String.Format("{0,-20}", ",Date"));
             entete.Append(String.Format("{0,-10}", ",Rad Time"));
@@ -294,7 +290,7 @@ namespace SerialPorts
                 { }
                 finally { };
                 mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
-                if (mots.Length >= 13)
+                if (mots.Length >= 8)
                 {
                     try { typeData = Convert.ToInt32(mots[2]); }
                     catch (FormatException) { }
