@@ -28,18 +28,14 @@ namespace SerialPorts
             Radiometres = new Queue();
             Queue threads = new Queue();
 
-            //read COM ports on the system
-            List<int> systemPorts = readSystemPorts();
+            
 
-            //read COM port entered by the user
-            List<int> usersPorts = readUserPorts(systemPorts);
+            List<int> validatedCom = getValidatedCom();
             
 
             //Initialisation threads et radiometres
-            foreach (int port in usersPorts)
+            foreach (int port in validatedCom)
             {
-                if (!systemPorts.Contains(port)) continue;
-            
                     Radiometre rad = new Radiometre("COM" + port);
                     if(rad.ouverturePort())
                     {
@@ -68,7 +64,47 @@ namespace SerialPorts
              
         }
 
-        private static List<int> readSystemPorts()
+        private static List<int> getValidatedCom()
+        {
+            //read COM ports on the system
+            List<int> systemPorts = getSystemComPorts();
+            List<int> usersPorts = new List<int>();
+
+            Boolean validCom = false;
+
+            while (!validCom)
+            {
+                //read COM port entered by the user
+                usersPorts = readUserPorts(systemPorts);
+                //validate COM ports to be used for radiometers
+                validCom = validateComs(usersPorts, systemPorts);
+                if (!validCom)
+                {
+                    Console.WriteLine("COM numbers are not valid ! please retry");
+                    Console.Write("Hit ENTER to continue");
+                    Console.ReadLine();
+                }
+            }
+
+            return usersPorts;
+        }
+
+        private static bool validateComs(List<int> usersPorts, List<int> systemPorts)
+        {
+            bool ok = true;
+            foreach(var port in usersPorts)
+            {
+                if (!systemPorts.Contains(port))
+                {
+                    ok = false;
+                    break;
+                }
+            }
+
+            return ok;
+        }
+
+        private static List<int> getSystemComPorts()
         {
             List<int> systemPorts = new List<int>();
            
@@ -84,21 +120,26 @@ namespace SerialPorts
         //todo: faire la logique pour valider les num de port entres par le user
         private static List<int> readUserPorts(List<int> systemPorts)
         {
-            List<int> userPorts = new List<int>();
-            Console.Write("Entrez les ports COM des radiometres ");
-            Console.WriteLine("exemple : 4, 11, 16, 15 ");
+            Console.Clear();
+            Console.Write("COM port(s) detected on the system : ");
+            foreach (var port in systemPorts)
+            {
+                Console.Write(" COM"+ port);
+            }
 
-            string messsage = Console.ReadLine();
-            string[] ports = messsage.Split(',');
+            List<int> userPorts = new List<int>();
+            Console.Write("\n\nEnter radiometers COM numbers  ");
+            Console.WriteLine("(ex. : 4, 11, 16, 15 )");
+
+            string userInput = Console.ReadLine();
+            string[] ports = userInput.Split(',');
 
             foreach (var port in ports)
             {
                 int portNb = Convert.ToInt32(port);
-                if (!systemPorts.Contains(portNb)) Console.WriteLine("COM" + portNb + " not found");
-                   
+                userPorts.Add(portNb);
             }
 
-            Console.ReadLine();
             return userPorts;
         }
 
