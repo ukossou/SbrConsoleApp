@@ -28,16 +28,19 @@ namespace SerialPorts
             Radiometres = new Queue();
             Queue threads = new Queue();
 
-            //int i = 0;
+            //read COM ports on the system
+            List<int> systemPorts = readSystemPorts();
+
+            //read COM port entered by the user
+            List<int> usersPorts = readUserPorts(systemPorts);
+            
+
             //Initialisation threads et radiometres
-            foreach (string port in SerialPort.GetPortNames())
+            foreach (int port in usersPorts)
             {
-                int noCom = Convert.ToInt32(port.Substring(3,1));
-                //Console.SetCursorPosition(i*4,Console.WindowHeight -2);
-                //Console.Write("num de COM " +noCom);
-                if(noCom > 3 && noCom < 8)
-                {
-                    Radiometre rad = new Radiometre(port);
+                if (!systemPorts.Contains(port)) continue;
+            
+                    Radiometre rad = new Radiometre("COM" + port);
                     if(rad.ouverturePort())
                     {
                         Radiometres.Enqueue(rad);
@@ -45,7 +48,7 @@ namespace SerialPorts
                         threadRad.Name = "thread " + port;
                         threads.Enqueue(threadRad);
                     }
-                }
+               
             }
             NbRadiometres = Radiometres.Count;
             foreach (Thread threadRad in threads)
@@ -64,6 +67,41 @@ namespace SerialPorts
                     rad.finaliser();
              
         }
+
+        private static List<int> readSystemPorts()
+        {
+            List<int> systemPorts = new List<int>();
+           
+            foreach (string port in SerialPort.GetPortNames())
+            {
+                int noCom = Convert.ToInt32(port.Substring(3));
+                systemPorts.Add(noCom);
+            }
+
+            return systemPorts;
+        }
+
+        //todo: faire la logique pour valider les num de port entres par le user
+        private static List<int> readUserPorts(List<int> systemPorts)
+        {
+            List<int> userPorts = new List<int>();
+            Console.Write("Entrez les ports COM des radiometres ");
+            Console.WriteLine("exemple : 4, 11, 16, 15 ");
+
+            string messsage = Console.ReadLine();
+            string[] ports = messsage.Split(',');
+
+            foreach (var port in ports)
+            {
+                int portNb = Convert.ToInt32(port);
+                if (!systemPorts.Contains(portNb)) Console.WriteLine("COM" + portNb + " not found");
+                   
+            }
+
+            Console.ReadLine();
+            return userPorts;
+        }
+
         private static void lireMessage()
         {
             String message;
@@ -87,6 +125,7 @@ namespace SerialPorts
 
         private static void afficher()
         {
+            Console.Clear();
             int nbColonnesMin = 80;
             int nbLignesMin = 25;
 
