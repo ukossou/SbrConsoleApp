@@ -8,7 +8,7 @@ using System.Timers;
 using System.Text;
 using System.Globalization;
 
-namespace SerialPorts
+namespace SbrConsoleApp
 {
     class Program
     {
