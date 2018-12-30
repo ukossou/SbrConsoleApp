@@ -20,6 +20,18 @@ namespace SbrConsoleApp
         private static int TailleMessage;
         static void Main(string[] args)
         {
+
+            SerialPortManager spManager = new SerialPortManager();
+            spManager.InitComPorts();
+
+            Console.ReadLine();
+
+            spManager.FreePorts();
+
+            Console.ReadLine();
+
+        #region old code
+            /*
             Console.Title = " SBR CARTEL ";
             TimerAffichage = new System.Timers.Timer(3000);
             TimerAffichage.Elapsed += new ElapsedEventHandler(updateAffichage);
@@ -61,7 +73,8 @@ namespace SbrConsoleApp
             foreach (Radiometre rad in Radiometres)
                 if (rad.Started)
                     rad.finaliser();
-             
+            */
+            #endregion
         }
 
         private static List<int> getValidatedCom()
