@@ -7,48 +7,70 @@ using System.Timers;
 
 namespace SbrConsoleApp
 {
-   
-    class MonitoredSerialPort
-    {
-        private SerialPort SerPort;
-        private Timer ReleaseTimer;
-        private SerialPortManager Manager;
-        private const Double PORT_RELEASE_DURATION = 30000;//30 seconds
 
-        public MonitoredSerialPort(ref SerialPort serialPort,  SerialPortManager manager)
+    class MonitoredSerialPort //: IDisposable
+    {
+        private SerialPort SerialCom;
+        private Timer ReleaseTimer;
+        private Timer ReceptionTimer;
+        private SerialPortManager Manager;
+        private const Double PORT_RELEASE_TIMEOUT = 20000;//20 seconds
+        private const Double RECEPTION_TIMEOUT = 15000;//15 seconds
+
+        public MonitoredSerialPort(ref SerialPort serialPort, SerialPortManager manager)
         {
-            SerPort = serialPort;
+            SerialCom = serialPort;
             Manager = manager;
 
-            ReleaseTimer = new Timer(PORT_RELEASE_DURATION);
+            ReleaseTimer = new Timer(PORT_RELEASE_TIMEOUT);
+            ReleaseTimer.AutoReset = false;
             ReleaseTimer.Elapsed += new ElapsedEventHandler(ReleaseTimerElapsed);
 
-            serialPort.DataReceived += new SerialDataReceivedEventHandler(DataReceivedEventHandler);
+            ReceptionTimer = new Timer(RECEPTION_TIMEOUT);
+            ReceptionTimer.AutoReset = false;
+            ReceptionTimer.Elapsed += new ElapsedEventHandler(ReceptionTimeOutHandler);
+
+            SerialCom.DataReceived += new SerialDataReceivedEventHandler(DataReceivedEventHandler);
         }
 
+        private void ReceptionTimeOutHandler(object sender, ElapsedEventArgs e)
+        {
+            Console.WriteLine(SerialCom.PortName + " reception timeout "+ DateTime.Now.ToLongTimeString());
+            ReceptionTimer.AutoReset = true;
+
+        }
 
         private Boolean FistTimeDataRecieved = true;
 
         private void DataReceivedEventHandler(object sender, SerialDataReceivedEventArgs e)
         {
-            if (FistTimeDataRecieved)
+            lock (this)
             {
-                Manager.StartReleaseTimers();
-                FistTimeDataRecieved = false;
-                SerPort.DiscardInBuffer();
-
-                Console.WriteLine(SerPort.PortName + " starting Release timer");
-            }
-            else
-            {
-                if (SerPort.IsOpen)
+                if (FistTimeDataRecieved)
                 {
-                    SerPort.DiscardInBuffer();
+                    Manager.StartReleaseTimers();
+                    FistTimeDataRecieved = false;
+                    SerialCom.DiscardInBuffer();
+
+                    ReceptionTimer.Start();
                 }
-                
-                if (ReleaseTimer.Enabled) ReleaseTimer.Stop();
+                else
+                {
+                    ReceptionTimer.Stop();
+                    ReceptionTimer.AutoReset = false;
+                    if (SerialCom.IsOpen)
+                    {
+                        SerialCom.DiscardInBuffer();
+                    }
+
+                    if (ReleaseTimer.Enabled)
+                    {
+                        ReleaseTimer.Stop();
+                    };
+                    ReceptionTimer.Start();
+                }
             }
-            
+
         }
 
         public void StartReleaseTimer()
@@ -58,11 +80,29 @@ namespace SbrConsoleApp
 
         private void ReleaseTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            Console.WriteLine(SerPort.PortName + " to be released");
+            Manager.DisposePort(this);
+        }
 
-            Manager.DisposePort(ref SerPort);
+        public void freePort()
+        {
+            if (SerialCom.IsOpen)
+            {
+                lock (this)
+                {
+                    ReleaseTimer.Stop();
+                    ReleaseTimer.Dispose();
 
-            Console.WriteLine(SerPort.PortName + " released !!!");
+                    ReceptionTimer.Stop();
+                    ReceptionTimer.Dispose();
+
+                    Manager = null;
+
+                    String portName = SerialCom.PortName;
+                    SerialCom.Close();
+                    SerialCom.Dispose();
+                    Console.WriteLine("Port " + portName + "  disposed !!!");
+                }
+            }
         }
     }
 }

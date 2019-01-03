@@ -12,10 +12,9 @@ namespace SbrConsoleApp
     class SerialPortManager
     {
         private const Int32  BAUD_RATE    = 9600;
-        private const Double PORT_RELEASE = 15000;//15 seconds
 
         private String[] comArray;
-        private Dictionary<String, SerialPort> openedPorts;
+        //private Dictionary<String, SerialPort> openedPorts;
         private List<MonitoredSerialPort> MonitoredSerialPorts;
 
         public void InitComPorts()
@@ -23,7 +22,6 @@ namespace SbrConsoleApp
             comArray = SerialPort.GetPortNames();
 
             PrintStringArray(comArray);
-            openedPorts = new Dictionary<string, SerialPort>();
             MonitoredSerialPorts = new List<MonitoredSerialPort>();
 
             //init serial ports 
@@ -34,11 +32,10 @@ namespace SbrConsoleApp
                 try
                 {
                     serialPort.Open();
-                    openedPorts.Add(name, serialPort);
                     serialPort.DiscardInBuffer();
 
                     MonitoredSerialPort monitoredSp = new MonitoredSerialPort(ref serialPort, this);
-                    monitoredSp.StartReleaseTimer();
+
                     MonitoredSerialPorts.Add(monitoredSp);
                 }
                 catch (Exception e)
@@ -62,28 +59,22 @@ namespace SbrConsoleApp
                     monPort.StartReleaseTimer();
                 }
                 releaseTimersStarted = true;
+                Console.WriteLine("Manager ... starting releaseTimer");
             }
         }
 
-        public void DisposePort(ref SerialPort sp)
+        public void DisposePort(MonitoredSerialPort monitored)
         {
-            if (sp.IsOpen)
-            {
-                sp.Dispose();
-            }
+            MonitoredSerialPorts.Remove(monitored);          
+            monitored.freePort();
+            monitored = null;
         }
 
         public void FreePorts()
         {
-            foreach(var serialPort in openedPorts.Values)
+            foreach(var monitored in MonitoredSerialPorts)
             {
-                if (serialPort.IsOpen)
-                {
-                    String portName = serialPort.PortName;
-                    serialPort.Close();
-                    serialPort.Dispose();
-                    Console.WriteLine("Port " + portName + "  disposed !!!");
-                }
+                monitored.freePort();
             }
         }
 

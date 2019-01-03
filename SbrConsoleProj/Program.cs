@@ -26,7 +26,7 @@ namespace SbrConsoleApp
 
             Console.ReadLine();
 
-            spManager.FreePorts();
+            //spManager.FreePorts();
 
             Console.ReadLine();
 
