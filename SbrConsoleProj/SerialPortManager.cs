@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Text;
 using System.IO.Ports;
-using System.Threading;
+//using System.Threading;
 using System.Globalization;
 using System.Timers;
 
@@ -11,21 +12,31 @@ namespace SbrConsoleApp
 {
     class SerialPortManager
     {
-        private const Int32  BAUD_RATE    = 9600;
+        private const Int32  BAUD_RATE    = 38400;
 
-        private String[] comArray;
+        private List<String> comList;
         //private Dictionary<String, SerialPort> openedPorts;
-        private List<MonitoredSerialPort> MonitoredSerialPorts;
+        private BlockingCollection<MonitoredSerialPort> MonitoredSerialPorts;
+        List<MonitoredSerialPort> PortsToFree;
+
+        private Timer ObserveTimer;
+        private Boolean ObserveTimerElapsed = false;
+        private const Double OBSERVE_TIMEOUT = 30000;//30 seconds
 
         public void InitComPorts()
         {
-            comArray = SerialPort.GetPortNames();
+            comList = new List<String>(SerialPort.GetPortNames());
 
-            PrintStringArray(comArray);
-            MonitoredSerialPorts = new List<MonitoredSerialPort>();
+            MonitoredSerialPorts = new BlockingCollection<MonitoredSerialPort>();
+            PortsToFree = new List<MonitoredSerialPort>();
+
+
+            ObserveTimer = new Timer(OBSERVE_TIMEOUT);
+            ObserveTimer.AutoReset = false;
+            ObserveTimer.Elapsed += new ElapsedEventHandler(ObserveTimerTimerElapsed);
 
             //init serial ports 
-            foreach (var name in comArray)
+            foreach (var name in comList)
             {
                 SerialPort serialPort = new SerialPort(name,BAUD_RATE);
 
@@ -44,12 +55,49 @@ namespace SbrConsoleApp
                 }
                 
             }
+        }
 
-            //start ports monitoring
+        private void ObserveTimerTimerElapsed(object sender, ElapsedEventArgs e)
+        {
+            ObserveTimerElapsed = true;
+        }
+
+        Boolean ReleaseTimeElapsed = false;
+
+        
+
+        public List<SerialPort> getRecievingPorts()
+        {
+            List<SerialPort> recievingPorts = new List<SerialPort>();
+            while (!ObserveTimerElapsed) ;
+
+            foreach(var monitored in MonitoredSerialPorts)
+            {             
+                if (monitored.dataRecieved())
+                {
+                    recievingPorts.Add(monitored.getSerialPort());
+                }
+                else
+                {
+                    PortsToFree.Add(monitored);
+                }
+            }
+
+            FreePorts();
+            return recievingPorts;
         }
 
         Boolean releaseTimersStarted = false;
        
+        public void StartObserveTimer(String comName)
+        {
+            if (!ObserveTimer.Enabled)
+            {
+                ObserveTimer.Start();
+                //Console.WriteLine("Manager ... starting ObserveTimer ..." + comName);
+            };
+        }
+
         public void StartReleaseTimers()
         {
             if(!releaseTimersStarted)
@@ -65,31 +113,29 @@ namespace SbrConsoleApp
 
         public void DisposePort(MonitoredSerialPort monitored)
         {
-            MonitoredSerialPorts.Remove(monitored);          
+            if (!ReleaseTimeElapsed) ReleaseTimeElapsed = true;        
             monitored.freePort();
             monitored = null;
         }
 
         public void FreePorts()
         {
-            foreach(var monitored in MonitoredSerialPorts)
+            foreach(var monitored in PortsToFree)
             {
                 monitored.freePort();
             }
         }
 
-        public void PrintStringArray(String[] collection)
+        public void PrintStringList(List<String> collection)
         {
             String toPrint = "";
 
-            if (collection.Length == 0) toPrint += "No Port detected";
+            if (collection.Count == 0) toPrint += "No Port detected";
 
             foreach (var content in collection)
             {
                 toPrint += content + " ";
             }
-
-            Console.WriteLine(toPrint);
         }
 
     }

@@ -20,7 +20,7 @@ namespace SbrConsoleApp
         private static int TailleMessage;
         static void Main(string[] args)
         {
-
+            /*
             SerialPortManager spManager = new SerialPortManager();
             spManager.InitComPorts();
 
@@ -28,11 +28,20 @@ namespace SbrConsoleApp
 
             //spManager.FreePorts();
 
-            Console.ReadLine();
+            Console.ReadLine();*/
 
         #region old code
-            /*
+            
             Console.Title = " SBR CARTEL ";
+
+            if(SerialPort.GetPortNames().Length == 0)
+            {
+                Console.WriteLine("No serial port detected ");
+                Console.WriteLine("... leaving ...");
+                Console.ReadLine();
+                return;
+            }
+
             TimerAffichage = new System.Timers.Timer(3000);
             TimerAffichage.Elapsed += new ElapsedEventHandler(updateAffichage);
            
@@ -40,12 +49,12 @@ namespace SbrConsoleApp
             Radiometres = new Queue();
             Queue threads = new Queue();
 
-            
+            //List<int> validatedCom = getValidatedCom();
 
-            List<int> validatedCom = getValidatedCom();
-            
+            //List<int> validatedCom = getRadPorts();
 
             //Initialisation threads et radiometres
+            /*
             foreach (int port in validatedCom)
             {
                     Radiometre rad = new Radiometre("COM" + port);
@@ -57,24 +66,47 @@ namespace SbrConsoleApp
                         threads.Enqueue(threadRad);
                     }
                
+            }*/
+
+            Console.WriteLine("Waiting for data");
+
+            foreach (var port in getRadPorts())
+            {
+                Radiometre rad = new Radiometre( port);
+                //if (rad.ouverturePort())
+                {
+                    Radiometres.Enqueue(rad);
+                    Thread threadRad = new Thread(new ThreadStart(rad.demarrer));
+                    threadRad.Name = "thread " + port;
+                    threads.Enqueue(threadRad);
+                }
+
             }
+
             NbRadiometres = Radiometres.Count;
             foreach (Thread threadRad in threads)
                 threadRad.Start();
 
             afficher();
             TimerAffichage.Start();
-          
+
+            Radiometre.Ecrire = true;
             lireMessage();
             
-
             foreach (Thread tRad in threads)
                 if (tRad.IsAlive) { tRad.Abort(); tRad.Join(); }
             foreach (Radiometre rad in Radiometres)
                 if (rad.Started)
                     rad.finaliser();
-            */
+            
             #endregion
+        }
+
+        private static List<SerialPort> getRadPorts()
+        {
+            SerialPortManager spManager = new SerialPortManager();
+            spManager.InitComPorts();
+            return spManager.getRecievingPorts();
         }
 
         private static List<int> getValidatedCom()
@@ -161,16 +193,14 @@ namespace SbrConsoleApp
             String message;
             while (!Radiometre.Terminer)
             {
-
                 message = Console.ReadLine();
-
-                if (message == "quit")
+                if (message.StartsWith("q"))
                 {
                     Radiometre.Terminer = true;
                 }
-                if (message == "mes")
+                //if (message == "mes")
                 {
-                    Radiometre.Ecrire = true;
+                    //Radiometre.Ecrire = true;
                 }
                 
                 //Thread.Sleep(10000);
@@ -210,8 +240,9 @@ namespace SbrConsoleApp
             }
 
             Console.SetCursorPosition(0, nbLignes-1);
-            Console.Write("\"quit\" : quitter   \"mes\" : mesurer");
-            Console.SetCursorPosition(45, nbLignes-1);
+            //Console.Write("\"quit\" : quitter   \"mes\" : mesurer");
+            Console.Write("\"q\" : quit");
+            Console.SetCursorPosition(25, nbLignes-1);
         }
 
         private static void updateAffichage(Object source, ElapsedEventArgs e )

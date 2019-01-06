@@ -47,6 +47,15 @@ namespace SbrConsoleApp
             TLoad = "Inconnue";
         }
 
+        public Radiometre(SerialPort serialPort)
+        {
+            PortSerie = serialPort;
+            TskyV = "Inconnue";
+            TskyH = "Inconnue";
+            TLoad = "Inconnue";
+            InitOK = true;
+        }
+
         public void demarrer()
         {
             lock (this)
@@ -57,10 +66,9 @@ namespace SbrConsoleApp
                     ThreadEcriture = new Thread(ecrireDisque);
                     FrequenceRad = detecterFrequence();
                     //Console.WriteLine("\n...Reception OK sur ... " + PortSerie.PortName
-                                        //+ "===" + FrequenceRad + "===\n");
+                    //+ "===" + FrequenceRad + "===\n");
                     //creer le repertoire qui contiendra les mesures
                     RepCourant = Directory.CreateDirectory("Rad-" + FrequenceRad);
-
                     //creer le fichier de donnees 
                     creerFichier();
 
@@ -178,7 +186,7 @@ namespace SbrConsoleApp
         private string creerEntete()
         {
             StringBuilder entete = new StringBuilder();
-            entete.Append(String.Format("{0,-20}", "Date"));
+            entete.Append(String.Format("{0,-9}", "Time"));
             entete.Append(String.Format("{0,-10}", ",Rad Time"));
             entete.Append(String.Format("{0,-5}", ",Rec"));
             entete.Append(String.Format("{0,-9}", ",PWM"));
@@ -196,7 +204,7 @@ namespace SbrConsoleApp
             entete.Append(String.Format("{0,-11}", ",X-Data"));
             entete.Append(String.Format("{0,-11}", ",Y-Data"));
 
-            entete.Append(String.Format("{0,-20}", ",Date"));
+            entete.Append(String.Format("{0,-9}", ",Time"));
             entete.Append(String.Format("{0,-10}", ",Rad Time"));
             entete.Append(String.Format("{0,-5}", ",Rec"));
             entete.Append(String.Format("{0,-8}", ",Freq"));
@@ -274,6 +282,7 @@ namespace SbrConsoleApp
             }
         }
 
+        const int VALID_LINE_LENGHT = 13;
         private int detecterFrequence()
         {
             int valeurFreq = 0;
@@ -297,7 +306,7 @@ namespace SbrConsoleApp
                 //Console.WriteLine("Frequence lue : " + ligne);
                 mots = ligne.Split(separateur, StringSplitOptions.RemoveEmptyEntries);
                 //Console.WriteLine("\n Mots lus : " + String.Join(" | ", mots));
-                if (mots.Length >= 13)
+                if (mots.Length >= VALID_LINE_LENGHT)
                 {
                     try { typeData = Convert.ToInt32(mots[2]); }
                     catch (FormatException) { }
@@ -360,7 +369,7 @@ namespace SbrConsoleApp
                 string indata = sp.ReadLine();
                 //enlever le premier champ du radiometre pour inserer l'lheure courante
                 indata = indata.Remove(0, 7);
-                indata = DateTime.Now.ToString() + indata;
+                indata = DateTime.Now.ToLongTimeString() + indata;
                 DonneeLues.Enqueue(indata); 
             }
             catch (Exception)
